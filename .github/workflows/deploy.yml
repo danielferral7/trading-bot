@@ -1,0 +1,35 @@
+name: Deploy to Azure Container Apps
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout código
+        uses: actions/checkout@v4
+
+      - name: Login Azure
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Login ACR
+        run: az acr login --name ${{ secrets.ACR_NAME }}
+
+      - name: Build imagen
+        run: docker build -t ${{ secrets.ACR_NAME }}.azurecr.io/trading-bot:latest .
+
+      - name: Push imagen
+        run: docker push ${{ secrets.ACR_NAME }}.azurecr.io/trading-bot:latest
+
+      - name: Deploy Container App
+        run: |
+          az containerapp update \
+            --name ${{ secrets.CONTAINER_APP_NAME }} \
+            --resource-group ${{ secrets.RESOURCE_GROUP }} \
+            --image ${{ secrets.ACR_NAME }}.azurecr.io/trading-bot:latest
